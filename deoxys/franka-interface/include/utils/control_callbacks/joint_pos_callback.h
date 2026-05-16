@@ -37,12 +37,36 @@ CreateJointPositionCallback(
         Eigen::Quaterniond(current_T_EE_in_base_frame.linear());
 
     if (!global_handler->running) {
-      std::array<double, 7> finished_joint_positions;
-      Eigen::VectorXd::Map(&finished_joint_positions[0], 7) =
-          current_state_info->joint_positions;
+      // Advance time so the interpolator decelerates along its own profile
+      // and reach MotionFinished only once it's fully settled. Braking q_d
+      // ourselves (hold or limitRate) violates libfranka's motion-generator
+      // continuity checks because it doesn't match the trajectory shape
+      // libfranka already observed.
+      static constexpr double kDqDoneRadPerS = 0.005;
+      static constexpr double kDdqDoneRadPerS2 = 0.1;
+      static constexpr double kActualDqDoneRadPerS = 0.01;
 
-      franka::JointPositions target_joint_positions(finished_joint_positions);
-      return franka::MotionFinished(target_joint_positions);
+      global_handler->time += period.toSec();
+      Eigen::Matrix<double, 7, 1> desired_q;
+      global_handler->traj_interpolator_ptr->GetNextStep(global_handler->time,
+                                                         desired_q);
+      std::array<double, 7> joint_positions;
+      Eigen::VectorXd::Map(&joint_positions[0], 7) = desired_q;
+      franka::JointPositions output(joint_positions);
+
+      double max_dq_d = 0.0;
+      double max_ddq_d = 0.0;
+      double max_dq = 0.0;
+      for (int i = 0; i < 7; i++) {
+        max_dq_d = std::max(max_dq_d, std::abs(robot_state.dq_d[i]));
+        max_ddq_d = std::max(max_ddq_d, std::abs(robot_state.ddq_d[i]));
+        max_dq = std::max(max_dq, std::abs(robot_state.dq[i]));
+      }
+      if (max_dq_d < kDqDoneRadPerS && max_ddq_d < kDdqDoneRadPerS2 &&
+          max_dq < kActualDqDoneRadPerS) {
+        return franka::MotionFinished(output);
+      }
+      return output;
     }
 
     if (global_handler->time == 0.0) {
