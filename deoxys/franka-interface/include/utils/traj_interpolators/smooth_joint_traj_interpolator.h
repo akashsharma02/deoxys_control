@@ -1,6 +1,7 @@
 // Copyright 2022 Yifeng Zhu
 
 #include "base_traj_interpolator.h"
+#include "utils/fr3_constants.h"
 #include <Eigen/Dense>
 #ifndef DEOXYS_FRANKA_INTERFACE_INCLUDE_UTILS_TRAJ_INTERPOLATORS_SMOOTH_JOINT_TRAJ_INTERPOLATOR_H_
 #define DEOXYS_FRANKA_INTERFACE_INCLUDE_UTILS_TRAJ_INTERPOLATORS_SMOOTH_JOINT_TRAJ_INTERPOLATOR_H_
@@ -23,10 +24,7 @@ private:
   Vector7d t_f_sync_;
   Vector7d q_1_;
 
-  // FR3 (Franka Research 3) per-joint velocity limits per the URDF /
-  // FCI docs. See common_utils.h for rationale.
-  Vector7d dq_max_ =
-      (Vector7d() << 2.0, 1.0, 1.5, 1.25, 3.0, 1.5, 3.0).finished();
+  Vector7d dq_max_ = fr3::kDqMax;
   Vector7d ddq_max_start_ = (Vector7d() << 1, 1, 1, 1, 1, 1, 1).finished();
   Vector7d ddq_max_goal_ = (Vector7d() << 1, 1, 1, 1, 1, 1, 1).finished();
 
