@@ -58,8 +58,13 @@ bool JointImpedanceController::ParseMessage(const FrankaControlMessage &msg) {
   Kp << Eigen::Map<const Eigen::Matrix<double, 7, 1>>(kp_array.data());
   Kd << Eigen::Map<const Eigen::Matrix<double, 7, 1>>(kd_array.data());
 
-  joint_max_ << 2.8978, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973;
-  joint_min_ << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
+  // FR3 (Franka Research 3) joint limits per the URDF / FCI docs.
+  // Originally these were Panda limits, which let commands pass the deoxys
+  // zero-torque guard but trip libfranka's tighter internal check on FR3
+  // hardware. The resulting throw inside the 1 kHz control thread aborts
+  // with "terminate called without an active exception".
+  joint_max_ <<  2.3093,  1.5133,  2.4937, -0.4461,  2.4800,  4.2094,  2.6895;
+  joint_min_ << -2.3093, -1.5133, -2.4937, -2.7478, -2.4800,  0.8521, -2.6895;
 
   this->state_estimator_ptr_->ParseMessage(msg.state_estimator_msg());
   return true;
