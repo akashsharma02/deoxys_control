@@ -55,8 +55,10 @@ bool OSCImpedanceController::ParseMessage(const FrankaControlMessage &msg) {
   static_q_task_ << 0.09017809387254755, -0.9824203501652151,
       0.030509718397568178, -2.694229634937343, 0.057700675144720104,
       1.860298714876101, 0.8713759453244422;
-  joint_max_ << 2.8978, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973;
-  joint_min_ << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
+  // FR3 (Franka Research 3) joint limits per the URDF / FCI docs.
+  // See joint_impedance.cpp for the full rationale.
+  joint_max_ <<  2.3093,  1.5133,  2.4937, -0.4461,  2.4800,  4.2094,  2.6895;
+  joint_min_ << -2.3093, -1.5133, -2.4937, -2.7478, -2.4800,  0.8521, -2.6895;
   avoidance_weights_ << 1., 1., 1., 1., 1., 10., 10.;
 
   std::vector<double> residual_mass_array;

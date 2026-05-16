@@ -48,8 +48,13 @@ private:
 
   double time_ = 0.0;
 
+  // FR3 (Franka Research 3) per-joint velocity limits per the URDF /
+  // FCI docs. The previous values (2.0/2.0/2.0/2.0/2.5/2.5/2.5) exceed
+  // FR3 on joints 2/3/4/6, so the trajectory planner could emit
+  // velocities that libfranka rejects mid-motion, throwing inside the
+  // 1 kHz control thread.
   Vector7d dq_max_ =
-      (Vector7d() << 2.0, 2.0, 2.0, 2.0, 2.5, 2.5, 2.5).finished();
+      (Vector7d() << 2.0, 1.0, 1.5, 1.25, 3.0, 1.5, 3.0).finished();
   Vector7d ddq_max_start_ = (Vector7d() << 5, 5, 5, 5, 5, 5, 5).finished();
   Vector7d ddq_max_goal_ = (Vector7d() << 5, 5, 5, 5, 5, 5, 5).finished();
 };
