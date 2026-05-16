@@ -14,6 +14,29 @@
 
 namespace control_callbacks {
 
+// Decay the previously commanded torque toward zero. Avoids
+// controller_torque_discontinuity on the abrupt non-zero → zero step
+// libfranka would otherwise see at session end.
+inline std::array<double, 7> RampTorqueDown(
+    const franka::RobotState &robot_state,
+    double decay = 0.8) {
+  std::array<double, 7> tau_decay;
+  for (int i = 0; i < 7; i++) {
+    tau_decay[i] = robot_state.tau_J_d[i] * decay;
+  }
+  return franka::limitRate(franka::kMaxTorqueRate, tau_decay,
+                           robot_state.tau_J_d);
+}
+
+inline bool TorqueIsNearZero(const std::array<double, 7> &tau,
+                             double thresh = 0.05) {
+  double max_abs = 0.0;
+  for (double t : tau) {
+    max_abs = std::max(max_abs, std::abs(t));
+  }
+  return max_abs < thresh;
+}
+
 std::function<franka::Torques(const franka::RobotState &, franka::Duration)>
 CreateTorqueFromCartesianSpaceCallback(
     const std::shared_ptr<SharedMemory> &global_handler,
@@ -38,8 +61,12 @@ CreateTorqueFromCartesianSpaceCallback(
         Eigen::Quaterniond(current_T_EE_in_base_frame.linear());
 
     if (!global_handler->running) {
-      franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-      return franka::MotionFinished(zero_torques);
+      auto tau_decay = RampTorqueDown(robot_state);
+      franka::Torques output(tau_decay);
+      if (TorqueIsNearZero(tau_decay)) {
+        return franka::MotionFinished(output);
+      }
+      return output;
     }
 
     std::array<double, 7> tau_d_array{};
@@ -104,8 +131,12 @@ CreateTorqueFromJointSpaceCallback(
         Eigen::Quaterniond(current_T_EE_in_base_frame.linear());
 
     if (!global_handler->running) {
-      franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-      return franka::MotionFinished(zero_torques);
+      auto tau_decay = RampTorqueDown(robot_state);
+      franka::Torques output(tau_decay);
+      if (TorqueIsNearZero(tau_decay)) {
+        return franka::MotionFinished(output);
+      }
+      return output;
     }
 
     std::array<double, 7> tau_d_array{};
