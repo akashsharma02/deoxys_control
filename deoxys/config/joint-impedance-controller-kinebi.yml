@@ -1,0 +1,22 @@
+controller_type: JOINT_IMPEDANCE
+
+is_delta: false
+
+traj_interpolator_cfg:
+  traj_interpolator_type: LINEAR_JOINT_POSITION
+  time_fraction: 0.3
+
+# Tuned via beta_scripts/benchmark_joint_impedance.py on the kinebi right arm.
+# Variant C47+5 (best of: C, C4, C7, C47, C47+5).
+# ss_p95 ≈ 0.52 deg, trk_rms ≈ 1.6 deg, overshoot ≈ 0.28 deg, no chatter.
+# kd chosen for ζ ≈ 1.0 against each kp.
+joint_kp: [200., 200., 200., 300., 200., 200., 150.]
+joint_kd: [ 28.,  28.,  28.,  35.,  28.,  28.,  24.]
+
+state_estimator_cfg:
+  is_estimation: true
+  state_estimator_type: EXPONENTIAL_SMOOTHING
+  alpha_q: 0.9
+  alpha_dq: 0.9
+  alpha_eef: 1.0
+  alpha_eef_vel: 1.0
