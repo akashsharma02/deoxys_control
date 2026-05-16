@@ -6,9 +6,7 @@ project (deoxys
   LANGUAGES CXX
   )
 
-# libfranka 0.19+ (required for FR3) uses std::optional in its public headers,
-# which is C++17. Was previously C++11 — bumping to 17 has no other downsides
-# on a modern (gcc 11) toolchain.
+# libfranka 0.19+ uses std::optional in public headers — needs C++17.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

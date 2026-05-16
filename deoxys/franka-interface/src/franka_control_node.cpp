@@ -534,13 +534,10 @@ int main(int argc, char **argv) {
       }
     });
 
-    // RAII guard: signal termination and join control_msg_sub on scope exit,
-    // including when an exception unwinds the try block. Without this, any
-    // throw from robot.control(...) leaves the joinable std::thread to be
-    // destructed by the unwinder, which calls std::terminate -> SIGABRT
-    // with no recoverable error text ("terminate called without an active
-    // exception").
-    auto _control_msg_sub_guard =
+    // RAII guard: join control_msg_sub on any scope exit (return or throw).
+    // Without it, an exception unwinds main() with a still-joinable thread,
+    // and std::thread::~thread calls std::terminate.
+    auto control_msg_sub_guard =
         std::shared_ptr<void>(nullptr, [&](void *) {
           global_handler->termination = true;
           if (control_msg_sub.joinable()) {
@@ -598,9 +595,6 @@ int main(int argc, char **argv) {
       global_handler->time = 0.0;
     }
     state_publisher->StopPublishing();
-
-    // control_msg_sub is joined by the RAII guard on scope exit (see
-    // declaration after the thread). No explicit join needed here.
   } catch (franka::Exception const &e) {
     auto logger = log_utils::get_logger(
         config["ARM_LOGGER"]["CONSOLE"]["LOGGER_NAME"].as<std::string>());
