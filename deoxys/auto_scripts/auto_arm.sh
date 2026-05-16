@@ -40,7 +40,11 @@ do
     echo ""
     echo "============================================================"
     echo "=== franka-interface exited at ${END_TS} with code ${EXIT_CODE}"
-    if [ "${EXIT_CODE}" -ge 128 ]; then
+    if [ "${EXIT_CODE}" -eq 0 ]; then
+        echo "===   (clean shutdown — client stopped sending; auto_arm will respawn)"
+    elif [ "${EXIT_CODE}" -eq 255 ]; then
+        echo "===   (return -1 from main — libfranka exception; see error above)"
+    elif [ "${EXIT_CODE}" -ge 129 ] && [ "${EXIT_CODE}" -le 192 ]; then
         SIG=$((EXIT_CODE - 128))
         echo "===   (terminated by signal ${SIG}; 6=SIGABRT, 11=SIGSEGV, 15=SIGTERM)"
     fi
