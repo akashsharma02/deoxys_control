@@ -240,10 +240,9 @@ StatePublisher::StatePublisher(std::string pub_port, int state_pub_rate)
     : zmq_publisher_(pub_port), state_pub_rate_(state_pub_rate) {}
 
 StatePublisher::~StatePublisher() {
-  // RAII cleanup: if StopPublishing() wasn't called (e.g. an exception
-  // unwound the caller before reaching it), the still-joinable
-  // state_pub_thread_ destructor would call std::terminate. Stop the
-  // loop and join here as well, so destruction is always safe.
+  // Safe destruction even if StopPublishing() wasn't called (e.g. an
+  // exception unwound the caller): without this, the still-joinable
+  // thread destructor calls std::terminate.
   running_ = false;
   if (state_pub_thread_.joinable()) {
     state_pub_thread_.join();

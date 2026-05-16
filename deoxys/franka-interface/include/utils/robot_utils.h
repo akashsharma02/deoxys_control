@@ -1,5 +1,7 @@
 // Copyright 2022 Yifeng Zhu
 
+#include <atomic>
+
 #include <Eigen/Core>
 
 #include <franka/control_types.h>
@@ -49,7 +51,7 @@ protected:
   } state_;
   zmq_utils::ZMQPublisher zmq_publisher_;
   int state_pub_rate_;
-  bool running_;
+  std::atomic<bool> running_{false};
 
 public:
   StatePublisher(std::string pub_port, int state_pub_rate);
