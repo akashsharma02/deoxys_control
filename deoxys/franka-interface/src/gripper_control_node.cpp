@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -24,6 +25,10 @@
 int main(int argc, char **argv) {
 
   // Load cofigs
+  if (argc < 2) {
+    spdlog::error("It seems that you forgot to specify a yaml config file");
+    return 0;
+  }
   YAML::Node config = YAML::LoadFile(argv[1]);
 
   double pub_rate = 40.;
@@ -103,7 +108,11 @@ int main(int argc, char **argv) {
       bool new_control_msg = false;
       while (running) {
         std::string msg;
-        msg = zmq_sub.recv(false);
+        msg = zmq_sub.recv(true);
+        if (msg.empty()) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          continue;
+        }
         FrankaGripperControlMessage control_msg;
         if (control_msg.ParseFromString(msg)) {
           new_control_msg = true;
@@ -127,6 +136,20 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     });
+
+    // RAII guard: stop both worker threads on any scope exit (return or
+    // throw). Without this, an exception unwinds main() with still-joinable
+    // std::threads and ~thread calls std::terminate.
+    auto gripper_threads_guard =
+        std::shared_ptr<void>(nullptr, [&](void *) {
+          running = false;
+          if (gripper_sub_thread.joinable()) {
+            gripper_sub_thread.join();
+          }
+          if (gripper_pub_thread.joinable()) {
+            gripper_pub_thread.join();
+          }
+        });
 
     gripper.homing();
     gripper_logger->info("Gripper homing complete");
@@ -189,9 +212,6 @@ int main(int argc, char **argv) {
         executing = false;
       }
     }
-    gripper_sub_thread.join();
-    gripper_pub_thread.join();
-
   } catch (franka::Exception const &e) {
     auto gripper_logger = log_utils::get_logger(
         config["GRIPPER_LOGGER"]["CONSOLE"]["LOGGER_NAME"].as<std::string>());
