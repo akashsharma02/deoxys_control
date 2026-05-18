@@ -46,12 +46,15 @@ public:
     p_start_ = p_start;
     q_start_ = q_start;
 
-    // Flip the sign if the dot product of quaternions is negative
+    p_goal_ = p_goal;
+    q_goal_ = q_goal;
+
+    // Flip the sign if the dot product of quaternions is negative, so slerp
+    // takes the short path. Must compare against the new q_goal_, not the
+    // previous one.
     if (q_goal_.coeffs().dot(q_start_.coeffs()) < 0.0) {
       q_start_.coeffs() << -q_start_.coeffs();
     }
-    p_goal_ = p_goal;
-    q_goal_ = q_goal;
   };
 
   inline void GetNextStep(const double &time_sec, Eigen::Vector3d &p_t,
