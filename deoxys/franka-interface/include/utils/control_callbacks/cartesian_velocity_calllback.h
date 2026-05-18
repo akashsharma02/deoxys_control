@@ -15,7 +15,41 @@
 
 
 namespace control_callbacks {
-    
+
+// Ramp the previously commanded cartesian velocity toward zero with bounded
+// acceleration. Returning zero velocity directly trips libfranka's
+// cartesian_motion_generator_velocity_discontinuity check on FR3.
+inline std::array<double, 6> RampCartesianVelocityDown(
+    const franka::RobotState &robot_state, double dt,
+    double max_trans_accel = 5.0, double max_rot_accel = 10.0) {
+  std::array<double, 6> vel_next;
+  const double dv_trans = max_trans_accel * dt;
+  const double dv_rot = max_rot_accel * dt;
+  for (int i = 0; i < 3; i++) {
+    double v = robot_state.O_dP_EE_d[i];
+    vel_next[i] = (v > 0.0) ? std::max(0.0, v - dv_trans)
+                            : std::min(0.0, v + dv_trans);
+  }
+  for (int i = 3; i < 6; i++) {
+    double v = robot_state.O_dP_EE_d[i];
+    vel_next[i] = (v > 0.0) ? std::max(0.0, v - dv_rot)
+                            : std::min(0.0, v + dv_rot);
+  }
+  return vel_next;
+}
+
+inline bool CartesianVelocityIsNearZero(const std::array<double, 6> &vel,
+                                        double thresh_trans = 0.005,
+                                        double thresh_rot = 0.01) {
+  for (int i = 0; i < 3; i++) {
+    if (std::abs(vel[i]) > thresh_trans) return false;
+  }
+  for (int i = 3; i < 6; i++) {
+    if (std::abs(vel[i]) > thresh_rot) return false;
+  }
+  return true;
+}
+
     std::function<franka::CartesianVelocities(const franka::RobotState &,
                                                franka::Duration)>
     CreateCartesianVelocitiesCallback(
@@ -42,8 +76,12 @@ namespace control_callbacks {
                     Eigen::Quaterniond(current_T_EE_in_base_frame.linear());
                 
                 if (!global_handler->running) {
-                franka::CartesianVelocities zero_velocities{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-                return franka::MotionFinished(zero_velocities);
+                  auto vel_decay = RampCartesianVelocityDown(robot_state, period.toSec());
+                  franka::CartesianVelocities output{vel_decay};
+                  if (CartesianVelocityIsNearZero(vel_decay)) {
+                    return franka::MotionFinished(output);
+                  }
+                  return output;
                 }
 
                 std::array<double, 6> vel_d_array{};
