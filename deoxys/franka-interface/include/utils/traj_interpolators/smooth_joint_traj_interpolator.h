@@ -35,12 +35,16 @@ private:
   double start_time_;
   bool start_;
   bool first_goal_;
-  bool speed_factor_;
+  // Kept at 1.0: this was previously `bool speed_factor_` initialized to 0.01,
+  // so bool(0.01)==true==1 and the multiplications below were no-ops. Restoring
+  // the field as double preserves that observed runtime behavior; lower the
+  // value here only after empirical retuning on hardware.
+  double speed_factor_;
 
 public:
   inline SmoothJointTrajInterpolator()
       : dt_(0.), max_time_(1.), start_time_(0.), start_(false),
-        first_goal_(true), speed_factor_(0.01) {
+        first_goal_(true), speed_factor_(1.0) {
     dq_max_ *= speed_factor_;
     ddq_max_start_ *= speed_factor_;
     ddq_max_goal_ *= speed_factor_;
