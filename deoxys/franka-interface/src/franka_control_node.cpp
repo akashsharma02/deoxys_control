@@ -30,7 +30,6 @@
 // Interpolators
 #include "utils/traj_interpolators/linear_joint_position_traj_interpolator.h"
 #include "utils/traj_interpolators/linear_pose_traj_interpolator.h"
-#include "utils/traj_interpolators/linear_position_traj_interpolator.h"
 #include "utils/traj_interpolators/min_jerk_joint_position_traj_interpolator.h"
 #include "utils/traj_interpolators/min_jerk_pose_traj_interpolator.h"
 #include "utils/traj_interpolators/smooth_joint_traj_interpolator.h"
@@ -65,7 +64,6 @@ enum ControllerType {
 
 enum TrajInterpolatorType {
   NO_INTERPOLATION,
-  LINEAR_POSITION,
   LINEAR_POSE,
   MIN_JERK_POSE,
   SMOOTH_JOINT_POSITION,
@@ -118,10 +116,7 @@ bool GetControllerType(const FrankaControlMessage &franka_control_msg,
 bool GetTrajInterpolatorType(const FrankaControlMessage &franka_control_msg,
                              TrajInterpolatorType &traj_interpolator_type) {
   if (franka_control_msg.traj_interpolator_type() ==
-      FrankaControlMessage_TrajInterpolatorType_LINEAR_POSITION) {
-    traj_interpolator_type = TrajInterpolatorType::LINEAR_POSITION;
-  } else if (franka_control_msg.traj_interpolator_type() ==
-             FrankaControlMessage_TrajInterpolatorType_LINEAR_POSE) {
+      FrankaControlMessage_TrajInterpolatorType_LINEAR_POSE) {
     traj_interpolator_type = TrajInterpolatorType::LINEAR_POSE;
   } else if (franka_control_msg.traj_interpolator_type() ==
              FrankaControlMessage_TrajInterpolatorType_MIN_JERK_POSE) {
@@ -446,11 +441,6 @@ int main(int argc, char **argv) {
                   std::make_shared<traj_utils::LinearPoseTrajInterpolator>();
               global_handler->logger->info("Initialize Pose interpolator!");
             } else if (control_command.traj_interpolator_type ==
-                       TrajInterpolatorType::LINEAR_POSITION) {
-              global_handler->traj_interpolator_ptr = std::make_shared<
-                  traj_utils::LinearPositionTrajInterpolator>();
-              global_handler->logger->info("Initialize Position interpolator!");
-            } else if (control_command.traj_interpolator_type ==
                        TrajInterpolatorType::MIN_JERK_POSE) {
               global_handler->traj_interpolator_ptr =
                   std::make_shared<traj_utils::MinJerkPoseTrajInterpolator>();
@@ -497,7 +487,6 @@ int main(int argc, char **argv) {
                                                       goal_state_info);
           switch (control_command.traj_interpolator_type) {
           case TrajInterpolatorType::LINEAR_POSE:
-          case TrajInterpolatorType::LINEAR_POSITION:
           case TrajInterpolatorType::MIN_JERK_POSE:
             global_handler->traj_interpolator_ptr->Reset(
                 global_handler->time, current_state_info->pos_EE_in_base_frame,
